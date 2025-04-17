@@ -66,6 +66,19 @@ function fetchAndDisplayData(lat, lon) {
     });
 }
 
+
+function triggerLocation() {
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      document.getElementById("locationModal").style.display = 'none';
+      fetchAndDisplayData(pos.coords.latitude, pos.coords.longitude);
+    },
+    err => {
+      alert("❌ Location access denied or not available.");
+    }
+  );
+}
+
 // ✅ Update Chart + Display AQI
 function updateChart(aqi) {
   const time = new Date().toLocaleTimeString();
@@ -169,6 +182,8 @@ input.addEventListener("input", () => {
       });
     });
 });
+
+
 
 // Hide suggestions outside click
 document.addEventListener("click", e => {
