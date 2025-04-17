@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>EcoSphere</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+
+
+  <style>
+
+    .search-container {
+      position: relative;
+      max-width: 400px;
+      margin: 20px auto 0;
+    }
+    
+    #manualLocation {
+      width: 100%;
+      padding: 10px;
+      font-size: 15px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      outline: none;
+    }
+    
+    #suggestions {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      border: 1px solid #ccc;
+      border-top: none;
+      background: white;
+      position: absolute;
+      width: 100%;
+      z-index: 999;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    
+    #suggestions li {
+      padding: 10px;
+      cursor: pointer;
+    }
+    
+    #suggestions li:hover {
+      background-color: #f0fdf4;
+    }
+    
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      color: #333;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #d1fae5;
+      padding: 12px 20px;
+      flex-wrap: wrap;
+    }
+
+    .logo {
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .top-nav a {
+      text-decoration: none;
+      color: #1f2937;
+      margin-left: 15px;
+      font-size: 16px;
+    }
+
+    .dashboard {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 20px;
+      flex-wrap: wrap;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 20px;
+      flex: 1 1 48%;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    .chart-card {
+      min-width: 300px;
+    }
+
+    canvas {
+      width: 100% !important;
+      max-height: 300px;
+    }
+
+    @media (max-width: 768px) {
+      .dashboard {
+        flex-direction: column;
+      }
+
+      .card {
+        flex: 1 1 100%;
+      }
+
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .top-nav {
+        margin-top: 10px;
+      }
+
+      .top-nav a {
+        display: inline-block;
+        margin: 8px 10px 0 0;
+      }
+
+      h2 {
+        font-size: 18px;
+      }
+
+      #aqi-level-heading {
+        font-size: 16px;
+      }
+
+      #aqi-advice {
+        font-size: 14px;
+      }
+
+      #pollutionChart {
+        max-height: 250px;
+      }
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    
+    .modal-box {
+      background: white;
+      max-width: 400px;
+      padding: 25px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+    
+    .modal-box h3 {
+      margin-bottom: 10px;
+      color: #15803d;
+    }
+    
+    .modal-box p {
+      font-size: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .modal-box button {
+      background: #16a34a;
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      font-size: 15px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    
+    .modal-box button:hover {
+      background: #15803d;
+    }
+
+    .search-container {
+      position: relative;
+      max-width: 600px;
+      margin: 20px auto 0;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    
+    #manualLocation {
+      flex: 1;
+      padding: 10px;
+      font-size: 15px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      outline: none;
+    }
+    
+    #detectBtn {
+      padding: 10px 14px;
+      background: #16a34a;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: 0.2s ease;
+    }
+    
+    #detectBtn:hover {
+      background: #15803d;
+    }
+    
+    
+  </style>
+</head>
+<body>
+
+  <!-- 🟨 Location Permission Modal -->
+<div class="modal-overlay" id="locationModal">
+  <div class="modal-box">
+    <h3>📍 Location Required</h3>
+    <p>EcoSphere needs your location to show real-time data for your area.</p>
+    <button onclick="triggerLocation()">Allow Location Access</button>
+  </div>
+</div>
+
+  <header>
+    <div class="logo">🥬 <strong>EcoSphere</strong></div>
+    <nav class="top-nav">
+      <a href="#">📊 Dashboard</a>
+      <a href="chatbot.html">🤖 Ask AI</a>
+    
+      
+     
+    </nav>
+  </header>
+<!-- 🔍 Search Bar -->
+<!-- 🔍 Search + Suggestions Container -->
+<div class="search-container">
+  <input type="text" id="manualLocation" placeholder="Search for location...">
+  <button id="detectBtn">📍 Detect My Location</button>
+  <ul id="suggestions"></ul>
+</div>
+
+
+  <main class="dashboard">
+    <section class="card chart-card">
+      <h2>🌍 Real-Time Environmental Quality Dashboard</h2>
+      <div id="locationDisplay">📍 Detecting location...</div>
+      <p>🌤️ Temp: <strong id="temp">--</strong></p>
+      <p>🌫 Humidity: <strong id="humidity">--</strong></p>
+      <p>⚠️ Pollution Index: <strong id="pollution">--</strong></p>
+      <canvas id="pollutionChart"></canvas>
+    </section>
+
+    <section class="card info-card">
+      <p style="font-weight: bold; font-size: 18px; margin-bottom: 10px;">🫁 Health Advisory</p>
+
+      <div id="aqi-advice-box" style="background: #f9f9f9; border-left: 4px solid #999; border-radius: 8px; padding: 16px;">
+        <h3 id="aqi-level-heading" style="margin-top: 0;">Loading...</h3>
+        <p id="aqi-advice" style="font-size: 15px; margin-bottom: 10px;"></p>
+        <ul id="aqi-tips" style="font-size: 14px; line-height: 1.6; margin-left: 20px;"></ul>
+        <hr style="margin: 15px 0;">
+        <h4 style="margin-bottom: 8px;">📊 AQI Categories:</h4>
+        <ul style="font-size: 13px; margin-left: 20px; line-height: 1.5;">
+          <li><span style="color: #22c55e;">🟢 0–50: Good</span> – No risk</li>
+          <li><span style="color: #eab308;">🟡 51–100: Moderate</span> – Sensitive groups cautious</li>
+          <li><span style="color: #f97316;">🟠 101–150: Unhealthy (Sensitive)</span></li>
+          <li><span style="color: #ef4444;">🔴 151–200: Unhealthy</span></li>
+          <li><span style="color: #a855f7;">🟣 201–300: Very Unhealthy</span></li>
+          <li><span style="color: #7f1d1d;">⚫ 301+: Hazardous</span></li>
+        </ul>
+        <hr style="margin: 15px 0;">
+        <p style="font-size: 12px; color: #666; text-align: center;">Data powered by EcoSphere • 2025</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Custom Location Permission Prompt -->
+  <div id="location-permission" style="display: none; max-width: 420px; margin: 30px auto; padding: 20px; border: 1px solid #ffeeba; border-radius: 10px; background: #fff3cd; text-align: center;">
+    <h3 style="margin-bottom: 10px;">📍 Location Required</h3>
+    <p>To display local environmental data, please allow location access.</p>
+    <button onclick="triggerLocation()" style="margin-top: 10px; padding: 8px 16px; font-size: 15px;">Allow Location Access</button>
+  </div>
+
+  <script>
+    const tempEl = document.getElementById("temp");
+    const humidityEl = document.getElementById("humidity");
+    const pollutionEl = document.getElementById("pollution");
+    const locationDisplay = document.getElementById("locationDisplay");
+    
+    const ctx = document.getElementById('pollutionChart').getContext('2d');
+    const pollutionChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'AQI (Air Quality Index)',
+          data: [],
+          borderColor: '#e11d48',
+          backgroundColor: 'rgba(225, 29, 72, 0.1)',
+          tension: 0.4,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true,
+            suggestedMax: 300
+          }
+        }
+      }
+    });
+    
+    // ✅ Fetch + Display Data (lat, lon)
+    function fetchAndDisplayData(lat, lon, cityLabel = null) {
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m`)
+        .then(res => res.json())
+        .then(data => {
+          tempEl.innerText = `${data.current.temperature_2m}°C`;
+          humidityEl.innerText = `${data.current.relative_humidity_2m}% RH`;
+        });
+    
+      fetch(`https://api.airvisual.com/v2/nearest_city?lat=${lat}&lon=${lon}&key=8b15058d-90cd-48bb-984b-8c1227e490b3`)
+        .then(res => res.json())
+        .then(data => {
+          const city = cityLabel || data.data.city || "your area";
+          const aqi = data.data.current.pollution.aqius;
+          locationDisplay.innerText = `📍 Location: ${city}`;
+          pollutionEl.innerText = `${aqi} AQI`;
+          updateChart(aqi);
+          updateAQIAdvice(aqi);
+        });
+    }
+    
+    // ✅ Update AQI Chart
+    function updateChart(aqi) {
+      const time = new Date().toLocaleTimeString();
+      const adjustedAQI = Math.max(0, aqi + Math.round(Math.random() * 10 - 5));
+    
+      if (pollutionChart.data.labels.length > 10) {
+        pollutionChart.data.labels.shift();
+        pollutionChart.data.datasets[0].data.shift();
+      }
+    
+      pollutionChart.data.labels.push(time);
+      pollutionChart.data.datasets[0].data.push(adjustedAQI);
+      pollutionChart.update();
+      pollutionEl.innerText = `${adjustedAQI} AQI`;
+      updateAQIAdvice(adjustedAQI);
+    }
+    
+    // ✅ AQI Health Tips
+    function updateAQIAdvice(aqi) {
+      const box = document.getElementById("aqi-advice-box");
+      const heading = document.getElementById("aqi-level-heading");
+      const adviceEl = document.getElementById("aqi-advice");
+      const tips = document.getElementById("aqi-tips");
+    
+      let level = "", message = "", color = "#999", tipsHTML = "";
+    
+      if (aqi <= 50) {
+        level = "🟢 Good";
+        message = "Air quality is clean and healthy.";
+        color = "#22c55e";
+        tipsHTML = `<li>✅ Great time for outdoor activity.</li>`;
+      } else if (aqi <= 100) {
+        level = "🟡 Moderate";
+        message = "Acceptable, but sensitive groups may feel mild effects.";
+        color = "#eab308";
+        tipsHTML = `<li>😷 Sensitive people should avoid long outdoor exposure.</li>`;
+      } else if (aqi <= 150) {
+        level = "🟠 Unhealthy for Sensitive Groups";
+        message = "Limit outdoor activity if you have asthma or allergies.";
+        color = "#f97316";
+        tipsHTML = `<li>👵 Elderly and children should remain indoors.</li>`;
+      } else if (aqi <= 200) {
+        level = "🔴 Unhealthy";
+        message = "Everyone may experience health effects.";
+        color = "#ef4444";
+        tipsHTML = `<li>🚫 Avoid outdoor exercise or travel.</li>`;
+      } else if (aqi <= 300) {
+        level = "🟣 Very Unhealthy";
+        message = "Serious health risks. Avoid any exposure.";
+        color = "#a855f7";
+        tipsHTML = `<li>❗ Stay indoors with filtration.</li>`;
+      } else {
+        level = "⚫ Hazardous";
+        message = "Health emergency. Stay indoors completely.";
+        color = "#7f1d1d";
+        tipsHTML = `<li>🚨 Do not go outside.</li>`;
+      }
+    
+      heading.innerText = `${level} – ${aqi} AQI`;
+      heading.style.color = color;
+      adviceEl.innerText = message;
+      box.style.borderLeft = `4px solid ${color}`;
+      tips.innerHTML = tipsHTML;
+    }
+    
+    // ✅ Trigger Location Button
+    function triggerLocation() {
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          document.getElementById("locationModal").style.display = 'none';
+          fetchAndDisplayData(pos.coords.latitude, pos.coords.longitude);
+        },
+        err => alert("⚠️ Location denied.")
+      );
+    }
+    
+    // ✅ Init - Check permission
+    navigator.permissions.query({ name: 'geolocation' }).then(result => {
+      if (result.state === 'granted') {
+        navigator.geolocation.getCurrentPosition(pos =>
+          fetchAndDisplayData(pos.coords.latitude, pos.coords.longitude)
+        );
+      } else {
+        document.getElementById("locationModal").style.display = 'flex';
+      }
+    });
+    
+    // ✅ GEOAPIFY AUTOCOMPLETE SEARCH
+    const API_KEY = "260a64dd6cde4288ae57e307fdab46fa";
+    const input = document.getElementById("manualLocation");
+    const suggestions = document.getElementById("suggestions");
+    
+    input.addEventListener("input", () => {
+      const query = input.value.trim();
+      if (query.length < 2) return suggestions.innerHTML = "";
+    
+      fetch(`https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(query)}&limit=5&apiKey=${API_KEY}`)
+        .then(res => res.json())
+        .then(data => {
+          suggestions.innerHTML = "";
+          data.features.forEach(loc => {
+            const li = document.createElement("li");
+            li.textContent = loc.properties.formatted;
+            li.onclick = () => {
+              input.value = loc.properties.formatted;
+              suggestions.innerHTML = "";
+              fetchAndDisplayData(loc.geometry.coordinates[1], loc.geometry.coordinates[0], loc.properties.city || loc.properties.name);
+            };
+            suggestions.appendChild(li);
+          });
+        });
+    });
+    
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".search-container")) {
+        suggestions.innerHTML = "";
+      }
+    });
+
+    // 👉 Detect Button logic (binds to button)
+document.getElementById("detectBtn").addEventListener("click", () => {
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      document.getElementById("locationModal").style.display = "none";
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+      fetchAndDisplayData(lat, lon); // you already have this function
+    },
+    (error) => {
+      alert("⚠️ Location access denied or unavailable.");
+    }
+  );
+});
+
+    </script>
+    
+</body>
+</html>

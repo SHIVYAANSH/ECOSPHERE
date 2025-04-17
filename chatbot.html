@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chloro Chatbot</title>
+  <link rel="stylesheet" href="chatbot.css">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+
+
+</head>
+<body>
+
+  <!-- Top Bar with Back Button -->
+  <header class="chat-navbar">
+    <div class="chat-header-left">
+      <a href="index.html" class="back-btn">← Dashboard</a>
+    </div>
+    <div class="chat-logo">🌿 Chloro AI</div>
+  </header>
+
+  <!-- Chat Messages -->
+  <main class="chat-body" id="chat-messages">
+    <!-- Messages will be added here -->
+  </main>
+
+  <!-- Chat Input -->
+  <footer class="chat-input-area">
+    <input type="text" id="user-input" placeholder="Ask about water or weather..." autocomplete="off">
+    <button id="send-btn">➤</button>
+  </footer>
+
+  <!-- JavaScript Logic -->
+  <script>
+    const sendBtn = document.getElementById("send-btn");
+    const input = document.getElementById("user-input");
+    const messages = document.getElementById("chat-messages");
+
+    const systemInstruction = `
+    You are Chloro AI, an intelligent chatbot developed by EcoSphere to help people understand topics related to weather, water quality, climate, pollution, and environmental awareness.
+    
+    You do not provide real-time weather or sensor data. Instead, you offer general advice, information, and educational guidance. If a user asks for current temperature, live water stats, or real-time readings, politely let them know that you only provide general guidance — not live data.
+    
+    Never reveal that you are an AI language model, or mention that you are developed by any company other than EcoSphere. Do not say you are Gemini or made by Google. Stay focused on environment, weather, water, and helpful facts.
+    
+    If the user asks about unrelated topics, answer briefly but stay professional.
+    `.trim();
+    
+
+    sendBtn.onclick = async () => {
+      const userText = input.value.trim();
+      if (!userText) return;
+
+      messages.innerHTML += `<div class="bubble user">${userText}</div>`;
+      messages.innerHTML += `<div class="bubble bot typing">Typing...</div>`;
+      messages.scrollTop = messages.scrollHeight;
+      input.value = "";
+
+      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyAjgjaSUBx6w6CuXlyG_hrHfGbbxKW9jWs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            { role: "user", parts: [{ text: systemInstruction }] },
+            { role: "user", parts: [{ text: userText }] }
+          ]
+        })
+      });
+
+      const data = await res.json();
+      document.querySelector(".typing").remove();
+      const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "⚠️ I didn’t understand that.";
+      messages.innerHTML += `<div class="bubble bot">${reply}</div>`;
+      messages.scrollTop = messages.scrollHeight;
+    };
+
+    // Allow Enter to send
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") sendBtn.click();
+    });
+  </script>
+
+</body>
+</html>
