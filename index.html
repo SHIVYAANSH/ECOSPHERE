@@ -8,10 +8,209 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  
 
 
   <style>
+    
+    .search-wrapper {
+      position: relative;
+      flex: 1;
+    }
+    
+    #manualLocation {
+      width: 100%;
+      padding: 10px 40px 10px 10px;
+      font-size: 15px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      outline: none;
+    }
+    
+    #micBtn {
+      position: absolute;
+      top: 50%;
+      right: 10px;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      color: #15803d;
+      transition: color 0.3s ease;
+    }
+    
+    #micBtn.listening {
+      animation: pulseMic 1s infinite ease-in-out;
+      color: red;
+    }
+    
+    @keyframes pulseMic {
+      0%, 100% { transform: translateY(-50%) scale(1); }
+      50% { transform: translateY(-50%) scale(1.2); }
+    }
+    
+    
+    .dashboard {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 20px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+    
 
+    .search-container {
+      max-width: 600px;
+      margin: 20px auto 0;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      z-index: 1;
+    }
+    
+    .search-top {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+    
+    .suggestion-box {
+      width: 100%;
+      position: relative;
+    }
+    
+    #suggestions {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      max-height: 220px;
+      overflow-y: auto;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+      z-index: 99;
+      position: relative; /* fixes overlap! */
+    }
+    
+    #suggestions li {
+      padding: 10px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    
+    #suggestions li:hover {
+      background-color: #f0fdf4;
+    }
+    
+    #loaderOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(10px);
+      z-index: 99999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      opacity: 1;
+      transition: opacity 0.6s ease-out, visibility 0.6s;
+    }
+    
+    #loaderOverlay.fade-out {
+      opacity: 0;
+      visibility: hidden;
+    }
+    
+    .eco-orbit-loader {
+      position: relative;
+      width: 80px;
+      height: 80px;
+    }
+    
+    .eco-core {
+      width: 40px;
+      height: 40px;
+      background: radial-gradient(circle, #22c55e, #16a34a);
+      border-radius: 50%;
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 2;
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+      animation: pulseGlow 2s infinite ease-in-out;
+    }
+    
+    .orbit-ring {
+      width: 80px;
+      height: 80px;
+      border: 2px dashed rgba(34, 197, 94, 0.4);
+      border-radius: 50%;
+      position: absolute;
+      animation: spinRing 3s linear infinite;
+    }
+    
+    @keyframes spinRing {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    @keyframes pulseGlow {
+      0% { box-shadow: 0 0 0px rgba(34, 197, 94, 0.3); transform: scale(1); }
+      50% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.5); transform: scale(1.1); }
+      100% { box-shadow: 0 0 0px rgba(34, 197, 94, 0.3); transform: scale(1); }
+    }
+    
+    .loader-text {
+      margin-top: 16px;
+      font-weight: 500;
+      font-size: 15px;
+      color: #15803d;
+      animation: fadeText 2s ease-in-out infinite alternate;
+    }
+    
+    @keyframes fadeText {
+      0% { opacity: 0.4; }
+      100% { opacity: 1; }
+    }
+    
+    #loaderOverlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(8px);
+      z-index: 99999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 1;
+      transition: opacity 0.6s ease-out, visibility 0.6s;
+    }
+  
+    #loaderOverlay.fade-out {
+      opacity: 0;
+      visibility: hidden;
+    }
+  
+    .spinner {
+      border: 8px solid #e5e7eb;
+      border-top: 8px solid #16a34a;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+    }
+  
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
     .search-container {
       position: relative;
       max-width: 400px;
@@ -87,6 +286,8 @@
     }
 
     .card {
+      vertical-align: top;
+
       background: #ffffff;
       border-radius: 10px;
       padding: 20px;
@@ -99,6 +300,8 @@
     }
 
     canvas {
+      margin-bottom: 0;
+
       width: 100% !important;
       max-height: 300px;
     }
@@ -224,6 +427,15 @@
   </style>
 </head>
 <body>
+<!-- 🌍 EcoGlow Orbit Loader -->
+<div id="loaderOverlay">
+  <div class="eco-orbit-loader">
+    <div class="eco-core"></div>
+    <div class="orbit-ring"></div>
+  </div>
+  <div class="loader-text">Sensing Earth’s Vital Signs...</div>
+</div>
+
 
   <!-- 🟨 Location Permission Modal -->
 <div class="modal-overlay" id="locationModal">
@@ -231,6 +443,7 @@
     <h3>📍 Location Required</h3>
     <p>EcoSphere needs your location to show real-time data for your area.</p>
     <button onclick="triggerLocation()">Allow Location Access</button>
+    
   </div>
 </div>
 
@@ -245,13 +458,20 @@
     </nav>
   </header>
 <!-- 🔍 Search Bar -->
-<!-- 🔍 Search + Suggestions Container -->
 <div class="search-container">
-  <input type="text" id="manualLocation" placeholder="Search for location...">
-  <button id="detectBtn">📍 Detect My Location</button>
-  <ul id="suggestions"></ul>
-  
+  <div class="search-top">
+    <div class="search-wrapper">
+      <input type="text" id="manualLocation" placeholder="Search for location...">
+      <button id="micBtn" title="Voice Search">🎤</button>
+    </div>
+    <button id="detectBtn">📍 Detect My Location</button>
+  </div>
+  <div class="suggestion-box">
+    <ul id="suggestions"></ul>
+  </div>
 </div>
+
+
 
 
   <main class="dashboard">
@@ -263,6 +483,8 @@
       <p>⚠️ Pollution Index: <strong id="pollution">--</strong></p>
       <canvas id="pollutionChart"></canvas>
     </section>
+
+    
 
     <section class="card info-card">
       
@@ -297,6 +519,8 @@
 
   <script src="main.js"></script>
   
-    
+  
+  
+
 </body>
 </html>
