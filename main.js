@@ -3,35 +3,20 @@ const humidityEl = document.getElementById("humidity");
 const pollutionEl = document.getElementById("pollution");
 const locationDisplay = document.getElementById("locationDisplay");
 
-// Chart Setup
 const ctx = document.getElementById('pollutionChart').getContext('2d');
-const pollutionChart = new Chart(ctx, {
-  type: 'line',
-  data: {
-    labels: [],
-    datasets: [{
-      label: 'AQI (Air Quality Index)',
-      data: [],
-      borderColor: '#e11d48',
-      backgroundColor: 'rgba(225, 29, 72, 0.1)',
-      tension: 0.4,
-      fill: true
-    }]
-  },
-  options: {
-    responsive: true,
-    scales: {
-      y: {
-        beginAtZero: true,
-        suggestedMax: 300
-      }
-    }
-  }
-});
+let pollutionChart = null;
+let autoUpdateInterval = null;
 
-// ✅ Fetch Weather + AQI + Real Location Name
+function getAQIColor(aqi) {
+  if (aqi <= 50) return "#22c55e";
+  if (aqi <= 100) return "#eab308";
+  if (aqi <= 150) return "#f97316";
+  if (aqi <= 200) return "#ef4444";
+  if (aqi <= 300) return "#a855f7";
+  return "#7f1d1d";
+}
+
 function fetchAndDisplayData(lat, lon) {
-  // Temperature + Humidity
   fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m`)
     .then(res => res.json())
     .then(data => {
@@ -39,14 +24,12 @@ function fetchAndDisplayData(lat, lon) {
       humidityEl.innerText = `${data.current.relative_humidity_2m}% RH`;
     });
 
-  // AQI + Location
-  fetch(`https://api.waqi.info/feed/geo:${lat};${lon}/?token=demo`)
+  fetch(`https://api.waqi.info/feed/geo:${lat};${lon}/?token=76e5c18be7f15ab93056ce19d4bf138e36a88b2c`)
     .then(res => res.json())
     .then(data => {
       if (data.status !== "ok") throw new Error("Invalid AQI data");
       const aqi = data.data.aqi;
 
-      // Real readable location via Geoapify
       fetch(`https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lon}&apiKey=260a64dd6cde4288ae57e307fdab46fa`)
         .then(res => res.json())
         .then(locData => {
@@ -55,49 +38,85 @@ function fetchAndDisplayData(lat, lon) {
           const state = prop.state || "";
           const fullLocation = state && locality !== state ? `${locality}, ${state}` : locality;
           locationDisplay.innerText = `📍 Location: ${fullLocation}`;
-          updateChart(aqi);
+
+          if (pollutionChart) pollutionChart.destroy();
+
+          // ⏱️ Preload 6 fake time points for smoother line
+          const now = new Date();
+          const labels = [];
+          const dataPoints = [];
+          for (let i = 5; i >= 0; i--) {
+            const time = new Date(now.getTime() - i * 5000).toLocaleTimeString();
+            labels.push(time);
+            dataPoints.push(aqi);
+          }
+
+          const color = getAQIColor(aqi);
+          pollutionChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: labels,
+              datasets: [{
+                label: 'AQI (Air Quality Index)',
+                data: dataPoints,
+                borderColor: color,
+                backgroundColor: color + "22",
+                tension: 0.4,
+                fill: true
+              }]
+            },
+            options: {
+              responsive: true,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  suggestedMax: 300
+                }
+              }
+            }
+          });
+
+          pollutionEl.innerText = `${aqi} AQI`;
+          updateAQIAdvice(aqi);
+
+          // 🕒 Auto-update every 5s
+          if (autoUpdateInterval) clearInterval(autoUpdateInterval);
+          autoUpdateInterval = setInterval(() => {
+            fetch(`https://api.waqi.info/feed/geo:${lat};${lon}/?token=76e5c18be7f15ab93056ce19d4bf138e36a88b2c`)
+              .then(res => res.json())
+              .then(data => {
+                if (data.status === "ok") {
+                  const newAQI = data.data.aqi;
+                  const time = new Date().toLocaleTimeString();
+                  const newColor = getAQIColor(newAQI);
+
+                  pollutionChart.data.labels.push(time);
+                  pollutionChart.data.datasets[0].data.push(newAQI);
+                  pollutionChart.data.datasets[0].borderColor = newColor;
+                  pollutionChart.data.datasets[0].backgroundColor = newColor + "22";
+
+                  if (pollutionChart.data.labels.length > 20) {
+                    pollutionChart.data.labels.shift();
+                    pollutionChart.data.datasets[0].data.shift();
+                  }
+
+                  pollutionChart.update();
+                  pollutionEl.innerText = `${newAQI} AQI`;
+                  updateAQIAdvice(newAQI);
+                }
+              });
+          }, 5000);
         });
     })
     .catch(err => {
+      console.error("AQI Fetch Error:", err);
       const fallbackAQI = 183;
       locationDisplay.innerText = `📍 Location: Delhi (Fallback)`;
-      updateChart(fallbackAQI);
+      updateAQIAdvice(fallbackAQI);
       showErrorAdvice("⚠️ Unable to fetch AQI. Showing default data.");
     });
 }
 
-
-function triggerLocation() {
-  navigator.geolocation.getCurrentPosition(
-    pos => {
-      document.getElementById("locationModal").style.display = 'none';
-      fetchAndDisplayData(pos.coords.latitude, pos.coords.longitude);
-    },
-    err => {
-      alert("❌ Location access denied or not available.");
-    }
-  );
-}
-
-// ✅ Update Chart + Display AQI
-function updateChart(aqi) {
-  const time = new Date().toLocaleTimeString();
-  const adjustedAQI = Math.max(0, aqi + Math.round(Math.random() * 10 - 5));
-
-  if (pollutionChart.data.labels.length > 10) {
-    pollutionChart.data.labels.shift();
-    pollutionChart.data.datasets[0].data.shift();
-  }
-
-  pollutionChart.data.labels.push(time);
-  pollutionChart.data.datasets[0].data.push(adjustedAQI);
-  pollutionChart.update();
-
-  pollutionEl.innerText = `${adjustedAQI} AQI`;
-  updateAQIAdvice(adjustedAQI);
-}
-
-// ✅ AQI Health Advisory Logic
 function updateAQIAdvice(aqi) {
   const box = document.getElementById("aqi-advice-box");
   const heading = document.getElementById("aqi-level-heading");
@@ -127,7 +146,6 @@ function updateAQIAdvice(aqi) {
   tips.innerHTML = tipsHTML;
 }
 
-// ✅ Error Fallback for AQI
 function showErrorAdvice(msg) {
   document.getElementById("aqi-level-heading").innerText = "Error fetching AQI";
   document.getElementById("aqi-advice").innerText = msg;
@@ -135,7 +153,6 @@ function showErrorAdvice(msg) {
   document.getElementById("aqi-advice-box").style.borderLeft = `4px solid #ef4444`;
 }
 
-// ✅ On Page Load — Ask for Location
 navigator.permissions.query({ name: 'geolocation' }).then(result => {
   if (result.state === 'granted') {
     navigator.geolocation.getCurrentPosition(pos =>
@@ -146,7 +163,6 @@ navigator.permissions.query({ name: 'geolocation' }).then(result => {
   }
 });
 
-// ✅ "Detect My Location" Button
 document.getElementById("detectBtn").addEventListener("click", () => {
   navigator.geolocation.getCurrentPosition(
     pos => {
@@ -157,7 +173,7 @@ document.getElementById("detectBtn").addEventListener("click", () => {
   );
 });
 
-// ✅ Geoapify Manual Search
+// Geoapify Manual Search
 const GEOAPIFY_KEY = "260a64dd6cde4288ae57e307fdab46fa";
 const input = document.getElementById("manualLocation");
 const suggestions = document.getElementById("suggestions");
@@ -183,9 +199,6 @@ input.addEventListener("input", () => {
     });
 });
 
-
-
-// Hide suggestions outside click
 document.addEventListener("click", e => {
   if (!e.target.closest(".search-container")) {
     suggestions.innerHTML = "";
